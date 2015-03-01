@@ -236,8 +236,13 @@ public:
                 rest_mov = 0;
                 if (fingersspread_mov == 5){
                     vector<string> files = updateDir();
-                    string execute_file = "cat " + files[directory_mov];
-                    system(execute_file.c_str());
+                    pid_t pid = fork();
+                    if(pid == 0) { //if child process
+                    	string exec = "vim " + files[directory_mov];
+                    	execlp(exec.c_str());
+                    }
+                    //string execute_file = "cat " + files[directory_mov];
+                    //system(execute_file.c_str());
                     
                 }
 
