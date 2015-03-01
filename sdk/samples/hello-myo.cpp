@@ -12,6 +12,11 @@
 #include <cstdlib>
 #include <unistd.h>
 #include <dirent.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
 #include <map>
 
 // The only file that needs to be included to use the Myo C++ SDK is myo.hpp.
