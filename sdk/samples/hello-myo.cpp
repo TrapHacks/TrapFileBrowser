@@ -19,6 +19,15 @@
 #include <netdb.h>
 #include <map>
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
+
 // The only file that needs to be included to use the Myo C++ SDK is myo.hpp.
 #include <myo/myo.hpp>
 using namespace std;
@@ -43,12 +52,39 @@ unsigned long commands_size;
 // Classes that inherit from myo::DeviceListener can be used to receive events from Myo devices. DeviceListener
 // provides several virtual functions for handling different kinds of events. If you do not override an event, the
 // default behavior is to do nothing.
+
+void error(const char *msg)
+{
+    perror(msg);
+    exit(0);
+}
 class DataCollector : public myo::DeviceListener
 {
+    
+    int sockfd, portno, n;
+    struct sockaddr_in serv_addr;
+    struct hostent *server;
 public:
     DataCollector()
-    : onArm(false), isUnlocked(false), roll_w(0), pitch_w(0), yaw_w(0), currentPose()
+    : onArm(false), isUnlocked(false), roll_w(0), pitch_w(0), yaw_w(0), currentPose(), portno(8124)
     {
+        sockfd = socket(AF_INET, SOCK_STREAM, 0);
+        if (sockfd < 0)
+            error("ERROR opening socket");
+        server = gethostbyname("localhost");
+        if (server == NULL) {
+            fprintf(stderr,"ERROR, no such host\n");
+            //exit(0);
+        }
+        bzero((char *) &serv_addr, sizeof(serv_addr));
+        serv_addr.sin_family = AF_INET;
+        bcopy((char *)server->h_addr,
+              (char *)&serv_addr.sin_addr.s_addr,
+              server->h_length);
+        serv_addr.sin_port = htons(portno);
+        if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0)
+            error("ERROR connecting");
+
     }
 
     // onUnpair() is called whenever the Myo is disconnected from Myo Connect by the user.
@@ -227,6 +263,8 @@ public:
                         }
                         
                     }
+                    string s = "1 " + to_string(directory_mov);
+                    n = write(sockfd, s.c_str(), s.length());
                 }
             
             }
@@ -270,6 +308,9 @@ public:
                             
                         }
                     }
+                    
+                    string s = "1 " + to_string(directory_mov);
+                    n = write(sockfd, s.c_str(), s.length());
                 }
             }
             else if (poseString == "fingersSpread")
@@ -284,7 +325,7 @@ public:
                 {
                     if(commands_list == true)
                     {
-                        if(commands_mov != 4){
+                        if(commands_mov != commands.size() - 1){
                             vector<string> files = updateDir();
                             system((commands[commands_mov] + files[directory_mov]).c_str());
                         }
@@ -322,15 +363,22 @@ public:
                 if (fist_mov == 20)
                 {
                     chdir("..");
+                    
+                    
                     directory_mov = 0;
                     vector<string> files = updateDir();
+                    string str = "0";
                     for (unsigned int i = 0;i < files.size();i++)
                     {
+                        str.append(" " + files[i]);
                         if(i == directory_mov)
                             cout << "* " << files[i] << endl;
                         else
                             cout << files[i] << endl;
                     }
+                    
+                    n = write(sockfd,str.c_str(),strlen(str.c_str()));
+//                    n = write(sockfd, "0 hello.txt goodbye yo hi", strlen("0 hello.txt goodbye yo hi"));
                 }
             }
             else
@@ -360,11 +408,51 @@ public:
 
 int main(int argc, char** argv)
 {
+    
+//    int sockfd, portno, n;
+//    struct sockaddr_in serv_addr;
+//    struct hostent *server;
+//    
+//    char buffer[256];
+//    if (argc < 3) {
+//        fprintf(stderr,"usage %s hostname port\n", argv[0]);
+//        exit(0);
+//    }
+//    portno = atoi(argv[2]);
+//    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+//    if (sockfd < 0)
+//        error("ERROR opening socket");
+//    server = gethostbyname(argv[1]);
+//    if (server == NULL) {
+//        fprintf(stderr,"ERROR, no such host\n");
+//        exit(0);
+//    }
+//    bzero((char *) &serv_addr, sizeof(serv_addr));
+//    serv_addr.sin_family = AF_INET;
+//    bcopy((char *)server->h_addr,
+//          (char *)&serv_addr.sin_addr.s_addr,
+//          server->h_length);
+//    serv_addr.sin_port = htons(portno);
+//    if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0)
+//        error("ERROR connecting");
+//    printf("Please enter the message: ");
+//    bzero(buffer,256);
+//    fgets(buffer,255,stdin);
+//    n = write(sockfd,buffer,strlen(buffer));
+//    if (n < 0)
+//        error("ERROR writing to socket");
+//    bzero(buffer,256);
+//    n = read(sockfd,buffer,255);
+//    if (n < 0)
+//        error("ERROR reading from socket");
+//    printf("%s\n",buffer);
+//    close(sockfd);
 
     commands.push_back("cat ");
     commands.push_back("git add ");
     commands.push_back("git commit ");
     commands.push_back("git push ");
+    commands.push_back("cd " );
     commands.push_back("exit commands list ");
     // We catch any exceptions that might occur below -- see the catch statement for more details.
     try
