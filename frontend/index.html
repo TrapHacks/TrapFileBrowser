@@ -1,0 +1,69 @@
+<!doctype html>
+<html>
+<head>
+    <style>
+        .red {
+            color: #ff0000;
+        }
+    </style>
+    <script src="http://localhost:8001/socket.io/socket.io.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+
+    <script>
+     console.log("HELLO");
+      var socket = io('http://localhost:8001');
+      var directory = [];
+      var activeIndex = 0;
+      var activeFile = "..";
+      socket.on('updateDir', function (data) {
+        directory = data;
+        console.log(directory);
+        changeFiles();
+        console.log("updateDir");
+      });
+
+      socket.on('updateIndex', function(data) {
+        console.log(data);
+        activeIndex = data;
+        changeFiles();
+      });
+
+      function enterFile() {
+        console.log("enter file");
+        socket.emit('enterFile', activeFile);
+      }
+
+      function changeFiles() {
+
+        $('#files').html('');
+        for(var i = 0; i < directory.length; i++) {
+            var tr = document.createElement('tr');
+            var td = document.createElement('td');
+            tr.appendChild(td);
+            var p = document.createElement('p');
+            
+            
+            p.innerText = directory[i];
+            if(i == activeIndex) {
+                
+                p.className = "red";
+            }
+            td.appendChild(p);
+            console.log(tr);
+            $('#files').append(tr);
+        }
+        
+      }
+    </script>
+    <button onclick="enterFile()">Enter</button>
+    <link rel="stylesheet" href="bootstrap-3.3.2-dist/css/bootstrap.css">
+
+</head>
+<body>
+    <table id="files">
+        
+        
+
+    </table>
+</body>
+</html>
