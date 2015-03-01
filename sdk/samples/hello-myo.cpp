@@ -20,6 +20,7 @@ using namespace std;
 
 int directory_mov = 0;
 unsigned long directory_size = 0;
+int commands_mov = 0;
 
 int rest_mov = 0;
 int wavein_mov = 0;
@@ -27,15 +28,18 @@ int waveout_mov = 0;
 int fingersspread_mov = 0;
 int doubletap_mov = 0;
 int fist_mov = 0;
+bool commands_list = false;
 
 vector<string> commands;
 string commit = "myo commit";
 int commit_num = 1;
+unsigned long commands_size;
 
 // Classes that inherit from myo::DeviceListener can be used to receive events from Myo devices. DeviceListener
 // provides several virtual functions for handling different kinds of events. If you do not override an event, the
 // default behavior is to do nothing.
-class DataCollector : public myo::DeviceListener {
+class DataCollector : public myo::DeviceListener
+{
 public:
     DataCollector()
     : onArm(false), isUnlocked(false), roll_w(0), pitch_w(0), yaw_w(0), currentPose()
@@ -83,7 +87,8 @@ public:
     {
         currentPose = pose;
 
-        if (pose != myo::Pose::unknown && pose != myo::Pose::rest) {
+        if (pose != myo::Pose::unknown && pose != myo::Pose::rest)
+        {
             // Tell the Myo to stay unlocked until told otherwise. We do that here so you can hold the poses without the
             // Myo becoming locked.
             myo->unlock(myo::Myo::unlockHold);
@@ -91,10 +96,13 @@ public:
             // Notify the Myo that the pose has resulted in an action, in this case changing
             // the text on the screen. The Myo will vibrate.
             myo->notifyUserAction();
-        } else {
+        }
+        else
+        {
             // Tell the Myo to stay unlocked only for a short period. This allows the Myo to stay unlocked while poses
             // are being performed, but lock after inactivity.
-            myo->unlock(myo::Myo::unlockTimed);
+            //myo->unlock(myo::Myo::unlockTimed);
+            myo->unlock(myo::Myo::unlockHold);
         }
     }
 
@@ -131,12 +139,14 @@ public:
     {
         DIR *dp;
         struct dirent *dirp;
-        if((dp  = opendir(dir.c_str())) == NULL) {
+        if((dp  = opendir(dir.c_str())) == NULL)
+        {
             cout << "Error(" << errno << ") opening " << dir << endl;
             return errno;
         }
         
-        while ((dirp = readdir(dp)) != NULL) {
+        while ((dirp = readdir(dp)) != NULL)
+        {
             files.push_back(string(dirp->d_name));
         }
         closedir(dp);
@@ -144,7 +154,8 @@ public:
     }
     
     
-    vector<string> updateDir() {
+    vector<string> updateDir()
+    {
         string dir = string(".");
         vector<string> files = vector<string>();
         getdir(dir,files);
@@ -157,112 +168,159 @@ public:
     // We define this function to print the current values that were updated by the on...() functions above.
     void print()
     {
-
-//        // Print out the orientation. Orientation data is always available, even if no arm is currently recognized.
-//        std::cout << '[' << std::string(roll_w, '*') << std::string(18 - roll_w, ' ') << ']'
-//                  << '[' << std::string(pitch_w, '*') << std::string(18 - pitch_w, ' ') << ']'
-//                  << '[' << std::string(yaw_w, '*') << std::string(18 - yaw_w, ' ') << ']';
-
-        if (onArm) {
-            // Print out the lock state, the currently recognized pose, and which arm Myo is being worn on.
-
-            // Pose::toString() provides the human-readable name of a pose. We can also output a Pose directly to an
-            // output stream (e.g. std::cout << currentPose;). In this case we want to get the pose name's length so
-            // that we can fill the rest of the field with spaces below, so we obtain it as a string using toString().
+        if (onArm)
+        {
+//            cout << "test";
             std::string poseString = currentPose.toString();
-            
-            if (poseString == "rest") {
-//                std::cout<< "rest";
+            if (poseString == "rest")
+            {
                 rest_mov +=1;
                 wavein_mov = 0;
                 waveout_mov = 0;
                 fingersspread_mov = 0;
-                rest_mov %= 6;
+                rest_mov %= 21;
                 fist_mov = 0;
-                if(rest_mov == 5){
+                if(rest_mov == 20)
+                {
                 }
             }
-            
-            else if (poseString == "waveIn"){
+            else if (poseString == "waveIn")
+            {
                 wavein_mov += 1;
                 waveout_mov = 0;
                 fingersspread_mov = 0;
                 fist_mov = 0;
                 rest_mov = 0;
-                wavein_mov %= 6;
-                if(wavein_mov == 5){
-                    directory_mov -= 1;
-                    vector<string> files = updateDir();
-                    directory_size = files.size();
-                    directory_mov = (directory_mov + directory_size) % directory_size;
-                    for (unsigned int i = 0;i < files.size();i++) {
-                        if(i == directory_mov)
-                            cout << "* " << files[i] << endl;
-                        else
-                            cout << files[i] << endl;
+                wavein_mov %= 21;
+                if(wavein_mov == 20)
+                {
+                    if(commands_list == false)
+                    {
+                        directory_mov -= 1;
+                        vector<string> files = updateDir();
+                        directory_mov = (directory_mov + files.size()) % files.size();
+                        for (unsigned int i = 0;i < files.size();i++)
+                        {
+                            if(i == directory_mov)
+                                cout << "* " << files[i] << endl;
+                            else
+                                cout << files[i] << endl;
+                        }
+                    }
+                    else
+                    {
+////                        commands_mov--;
+//                        commands_mov = (commands_mov + commands.size() - 1) % commands.size();
+                        
+                        for(unsigned int i = 0; i < commands_size; i++)
+                        {
+                            if(i == commands_mov)
+                                cout << "* " << commands[i] << endl;
+                            else
+                                cout << commands[i] << endl;
+                        
+                        }
+                        
                     }
                 }
-            }
             
-            else if (poseString == "waveOut"){
+            }
+            else if (poseString == "waveOut")
+            {
                 waveout_mov +=1;
-                waveout_mov %= 6;
+                waveout_mov %= 21;
                 fingersspread_mov = 0;
                 fist_mov = 0;
                 rest_mov = 0;
                 wavein_mov = 0;
-                if(waveout_mov == 5){
-                    directory_mov += 1;
-                    vector<string> files = updateDir();
-                    directory_size = files.size();
-                    directory_mov = (directory_mov + directory_size) % directory_size;
+//                cout << "wave out detected";
+                if(waveout_mov == 20)
+                {
+//                    cout<<"test";
+                    if(commands_list == false)
+                    {
+                        directory_mov += 1;
+                        vector<string> files = updateDir();
+                        directory_mov = (directory_mov + files.size()) % files.size();
 
-                    for (unsigned int i = 0;i < files.size();i++) {
-                        if(i == directory_mov)
-                            cout << "* " << files[i] << endl;
-                        else
-                            cout << files[i] << endl;
+                        for (unsigned int i = 0;i < files.size();i++)
+                        {
+                            if(i == directory_mov)
+                                cout << "* " << files[i] << endl;
+                            else
+                                cout << files[i] << endl;
+                        }
+                    }
+                    else
+                    {
+                        commands_mov += 1;
+                        commands_mov = (commands_mov + commands.size()) % commands.size();
+                        
+                        for(unsigned int i= 0; i < commands.size(); i++)
+                        {
+                            if(i == commands_mov)
+                                cout << "* " << commands[i] << endl;
+                            else
+                                cout << commands[i] << endl;
+                            
+                        }
                     }
                 }
-
             }
-            
-            else if (poseString == "fingersSpread"){
+            else if (poseString == "fingersSpread")
+            {
                 fingersspread_mov +=1;
                 waveout_mov = 0;
                 wavein_mov = 0;
-                fingersspread_mov %= 6;
+                fingersspread_mov %= 21;
                 fist_mov = 0;
                 rest_mov = 0;
-                if (fingersspread_mov == 5){
-                    vector<string> files = updateDir();
-                    pid_t pid = fork();
-                    if(pid == 0) { //if child process
-                    	string exec = "vim " + files[directory_mov];
-                    	execlp(exec.c_str());
+                if (fingersspread_mov == 20)
+                {
+                    if(commands_list == true)
+                    {
+                        if(commands_mov != 4){
+                            vector<string> files = updateDir();
+                            system((commands[commands_mov] + files[directory_mov]).c_str());
+                        }
+                        
+                       commands_list=false;
                     }
-                    //string execute_file = "cat " + files[directory_mov];
-                    //system(execute_file.c_str());
-                    
+                    else
+                    {
+                        commands_list = true;
+                        commands_mov = 0;
+//                        cout << "stuck" << endl;
+                        for(unsigned int i = 0; i < commands.size(); i++)
+                        {
+                            if( i == commands_mov)
+                                cout << "* " << commands[i] << endl;
+                            else
+                                cout << commands[i] << endl;
+                        }
+                        
+//                        cout << "GOT OUT"<< endl;
+                    }
                 }
-
             }
             
-
-            else if (poseString == "fist"){
+            else if (poseString == "fist")
+            {
                 fist_mov +=1;
                 fingersspread_mov = 0;
                 rest_mov = 0;
                 waveout_mov = 0;
                 wavein_mov = 0;
-                fist_mov %= 6;
+                fist_mov %= 21;
 //                std::cout<< "fist";
                 
-                if (fist_mov == 5) {
+                if (fist_mov == 20)
+                {
                     chdir("..");
                     directory_mov = 0;
                     vector<string> files = updateDir();
-                    for (unsigned int i = 0;i < files.size();i++) {
+                    for (unsigned int i = 0;i < files.size();i++)
+                    {
                         if(i == directory_mov)
                             cout << "* " << files[i] << endl;
                         else
@@ -270,20 +328,13 @@ public:
                     }
                 }
             }
-            
-            else{
-
+            else
+            {
             }
-
-            
-
-//            std::cout << '[' << (isUnlocked ? "unlocked" : "locked  ") << ']'
-//                      << '[' << (whichArm == myo::armLeft ? "L" : "R") << ']';
-        } else {
-            // Print out a placeholder for the arm and pose when Myo doesn't currently know which arm it's on.
-//            std::cout << '[' << std::string(8, ' ') << ']' << "[?]" << '[' << std::string(14, ' ') << ']';
         }
-
+        else
+        {
+        }
         std::cout << std::flush;
     }
 
@@ -305,52 +356,47 @@ public:
 int main(int argc, char** argv)
 {
 
-    commands.push_back("echo ");
-    commands.push_back("git add -a");
-    commands.push_back("git commit -m");
-    commands.push_back("git push origin master");
+    commands.push_back("cat ");
+    commands.push_back("git add ");
+    commands.push_back("git commit ");
+    commands.push_back("git push ");
+    commands.push_back("exit commands list ");
     // We catch any exceptions that might occur below -- see the catch statement for more details.
-    try {
+    try
+    {
+        myo::Hub hub("com.example.hello-myo");
 
-    // First, we create a Hub with our application identifier. Be sure not to use the com.example namespace when
-    // publishing your application. The Hub provides access to one or more Myos.
-    myo::Hub hub("com.example.hello-myo");
+        std::cout << "Attempting to find a Myo..." << std::endl;
 
-    std::cout << "Attempting to find a Myo..." << std::endl;
+        myo::Myo* myo = hub.waitForMyo(10000);
+        if (!myo)
+        {
+            throw std::runtime_error("Unable to find a Myo!");
+        }
+        std::cout << "Connected to a Myo armband!" << std::endl << std::endl;
 
-    // Next, we attempt to find a Myo to use. If a Myo is already paired in Myo Connect, this will return that Myo
-    // immediately.
-    // waitForMyo() takes a timeout value in milliseconds. In this case we will try to find a Myo for 10 seconds, and
-    // if that fails, the function will return a null pointer.
-    myo::Myo* myo = hub.waitForMyo(10000);
+        // Next we construct an instance of our DeviceListener, so that we can register it with the Hub.
+        DataCollector collector;
 
-    // If waitForMyo() returned a null pointer, we failed to find a Myo, so exit with an error message.
-    if (!myo) {
-        throw std::runtime_error("Unable to find a Myo!");
-    }
+        // Hub::addListener() takes the address of any object whose class inherits from DeviceListener, and will cause
+        // Hub::run() to send events to all registered device listeners.
+        hub.addListener(&collector);
 
-    // We've found a Myo.
-    std::cout << "Connected to a Myo armband!" << std::endl << std::endl;
-
-    // Next we construct an instance of our DeviceListener, so that we can register it with the Hub.
-    DataCollector collector;
-
-    // Hub::addListener() takes the address of any object whose class inherits from DeviceListener, and will cause
-    // Hub::run() to send events to all registered device listeners.
-    hub.addListener(&collector);
-
-    // Finally we enter our main loop.
-    while (1) {
-        // In each iteration of our main loop, we run the Myo event loop for a set number of milliseconds.
-        // In this case, we wish to update our display 20 times a second, so we run for 1000/20 milliseconds.
-        hub.run(1000/20);
-        // After processing events, we call the print() member function we defined above to print out the values we've
-        // obtained from any events that have occurred.
-        collector.print();
-    }
+        // Finally we enter our main loop.
+        while (1)
+        {
+            // In each iteration of our main loop, we run the Myo event loop for a set number of milliseconds.
+            // In this case, we wish to update our display 20 times a second, so we run for 1000/20 milliseconds.
+            hub.run(1000/20);
+            // After processing events, we call the print() member function we defined above to print out the values we've
+            // obtained from any events that have occurred.
+            collector.print();
+        }
 
     // If a standard exception occurred, we print out its message and exit.
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e)
+    {
         std::cerr << "Error: " << e.what() << std::endl;
         std::cerr << "Press enter to continue.";
         std::cin.ignore();
